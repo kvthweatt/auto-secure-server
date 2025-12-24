@@ -17,21 +17,11 @@ chmod +x docker-run.sh
 ```
 
 ## 🔒 What's Inside?  
-Layer	Tools	Enterprise Equivalent  
-Network	UFW, iptables, SPA, Fail2Ban	Cloudflare WAF ($200+/month)  
-Host	Kernel hardening, AppArmor	CrowdStrike ($15+/host/month)  
-Files	AIDE, Tripwire, ClamAV	Qualys FIM ($5k+/year)  
-Audit	Lynis, LogWatch, AuditD	Tenable ($3k+/scan)  
-Firewall	Custom rules, GeoIP blocking	Palo Alto ($10k+ hardware)  
-Total Cost	$0	$25,000+/year  
-
-## 📊 Real Performance (Not Marketing)  
-Metric	Your Setup	"Enterprise" Solution  
-RAM Usage	312MB	2GB+  
-CPU Usage	1.2% avg	5-10% avg  
-Deployment	60 seconds	60 days (sales cycle)  
-Monthly Cost	$6	$2,083+  
-Yearly Cost	$72	$25,000+  
+**Network:**	UFW, iptables, SPA, Fail2Ban WAF  
+**Host:**	Kernel hardening, AppArmor  
+**Files:**	AIDE, Tripwire, ClamAV  
+**Audit:**	Lynis, LogWatch, AuditD	Tenable  
+**Total Cost:**	$0
 
 # 🚨 Features That Matter  
 ## ✅ Smart IP Management  

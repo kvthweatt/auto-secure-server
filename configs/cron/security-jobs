@@ -1,0 +1,28 @@
+# Auto-Secure Server - Security Maintenance Jobs
+
+# Update ClamAV virus definitions every 3 hours
+0 */3 * * * root /usr/bin/freshclam --quiet
+
+# Daily security scan with rkhunter at 2 AM
+0 2 * * * root /usr/bin/rkhunter --checkall --skip-keypress --cronjob
+
+# Weekly AIDE integrity check at 3 AM every Sunday
+0 3 * * 0 root /usr/sbin/aide --check
+
+# Update Cloudflare IPs every Monday at 4 AM
+0 4 * * 1 root /usr/local/bin/update-cloudflare-ips.sh
+
+# Weekly Lynis audit at 5 AM every Sunday
+0 5 * * 0 root /usr/bin/lynis audit system --quiet --no-colors
+
+# Log rotation for security logs
+0 6 * * * root /usr/sbin/logrotate /etc/logrotate.d/auto-secure
+
+# Check for security updates daily
+30 1 * * * root apt-get update && apt-get upgrade -s | grep -i security
+
+# Clean old fail2ban bans older than 90 days
+0 7 * * * root sqlite3 /var/lib/fail2ban/fail2ban.sqlite3 "DELETE FROM bans WHERE timestamp < datetime('now', '-90 days');"
+
+# Monitor disk space for security logs
+*/30 * * * * root df -h /var/log | tail -1 | awk '{if ($5 > 90) print "High disk usage on /var/log: "$5}' | wall

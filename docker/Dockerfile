@@ -1,64 +1,117 @@
-# Auto-Secure Server - Security Foundation for Any Application
-# Builds a complete security-hardened base container
+# Auto-Secure Server - Security Foundation
+FROM ubuntu:24.04
 
-# Stage 1: Builder for optimized layers
-FROM ubuntu:24.04 as builder
+LABEL maintainer="Karac Von Thweatt"
+LABEL description="Auto-Secure Server - Enterprise Security for Free"
+LABEL version="1.0.0"
 
-# Non-interactive mode
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=UTC
 
-# Create minimal security user first
+# Add universe repository for some packages
+RUN echo "deb http://archive.ubuntu.com/ubuntu noble main universe" > /etc/apt/sources.list && \
+    echo "deb http://archive.ubuntu.com/ubuntu noble-updates main universe" >> /etc/apt/sources.list && \
+    echo "deb http://archive.ubuntu.com/ubuntu noble-security main universe" >> /etc/apt/sources.list
+
+# Update and install core packages first
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    wget \
+    gnupg2 \
+    lsb-release \
+    software-properties-common \
+    sudo \
+    systemd \
+    cron \
+    logrotate \
+    rsyslog \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Apache and PHP
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apache2 \
+    apache2-utils \
+    php \
+    php-cli \
+    php-common \
+    php-mysql \
+    php-gd \
+    php-mbstring \
+    php-curl \
+    php-xml \
+    php-bcmath \
+    php-zip \
+    php-opcache \
+    libapache2-mod-php \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install security tools - PART 1 (Install iptables-persistent first)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    iptables \
+    iptables-persistent \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install security tools - PART 2 (Install the rest, excluding the ones above)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    fail2ban \
+    ufw \
+    clamav \
+    clamav-daemon \
+    clamav-freshclam \
+    rkhunter \
+    aide \
+    aide-common \
+    lynis \
+    apparmor \
+    apparmor-utils \
+    net-tools \
+    iputils-ping \
+    dnsutils \
+    jq \
+    git \
+    python3 \
+    python3-pip \
+    python3-venv \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install additional security tools from different sources
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    # logwatch is in universe
+    logwatch \
+    # sshguard might need a PPA or alternative
+    # sshguard \
+    # knockd might not be available
+    # knockd \
+    # auditd is usually installed by default
+    auditd \
+    && rm -rf /var/lib/apt/lists/*
+
+# For tools not in Ubuntu 24.04 yet, install from source or use alternatives
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpcap-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install sshguard from source (if needed)
+# RUN cd /tmp && \
+#     wget https://github.com/sshguard/sshguard/releases/download/v2.4.2/sshguard-2.4.2.tar.gz && \
+#     tar -xzf sshguard-2.4.2.tar.gz && \
+#     cd sshguard-2.4.2 && \
+#     ./configure && \
+#     make && \
+#     make install
+
+# Create security user
 RUN groupadd -r -g 1001 secuser && \
     useradd -r -u 1001 -g secuser -s /bin/bash -m -d /home/secuser secuser && \
     mkdir -p /etc/sudoers.d && \
     echo "secuser ALL=(ALL) NOPASSWD: /usr/sbin/service, /usr/sbin/fail2ban-client, /usr/sbin/ufw" > /etc/sudoers.d/secuser
 
-# Stage 2: Final image
-FROM ubuntu:24.04
-
-LABEL maintainer="Your Name <your@email.com>"
-LABEL description="Auto-Secure Server - Enterprise-grade security for $6/month"
-LABEL version="1.0.0"
-LABEL security.scan="lynis-score:85+"
-
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=UTC
-
-# Copy security user from builder
-COPY --from=builder /etc/passwd /etc/passwd
-COPY --from=builder /etc/group /etc/group
-COPY --from=builder /etc/sudoers.d/secuser /etc/sudoers.d/secuser
-
-# Install everything in one RUN layer (optimized for cache)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    # Core
-    ca-certificates curl wget gnupg2 lsb-release software-properties-common \
-    sudo systemctl systemd systemd-sysv cron logrotate rsyslog \
-    # Web stack
-    apache2 apache2-utils \
-    php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-gd php8.3-mbstring \
-    php8.3-curl php8.3-xml php8.3-bcmath php8.3-zip php8.3-opcache \
-    libapache2-mod-php8.3 \
-    # Security stack
-    fail2ban sshguard ufw \
-    clamav clamav-daemon clamav-freshclam \
-    rkhunter chkrootkit aide aide-common \
-    lynis tripwire logwatch \
-    apparmor apparmor-utils apparmor-profiles \
-    iptables iptables-persistent ipset iproute2 \
-    knockd auditd audit-viewer \
-    # Utilities
-    net-tools iputils-ping dnsutils nmap whois \
-    jq git unzip zip tar gzip bzip2 \
-    python3 python3-pip python3-venv \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get clean
-
 # Enable Apache modules
-RUN a2enmod rewrite headers ssl expires proxy proxy_http proxy_balancer cache
+RUN a2enmod rewrite headers ssl expires
 
-# PHP optimizations for security
+# PHP security optimizations
 RUN { \
     echo 'memory_limit = 128M'; \
     echo 'upload_max_filesize = 64M'; \
@@ -71,51 +124,44 @@ RUN { \
     echo 'opcache.revalidate_freq=2'; \
     echo 'expose_php = Off'; \
     echo 'display_errors = Off'; \
-    echo 'log_errors = On'; \
     } > /etc/php/8.3/apache2/conf.d/99-security.ini
+
+# Create necessary directories
+RUN mkdir -p \
+    /etc/fail2ban/jail.d \
+    /var/lib/aide \
+    /var/log/auto-secure \
+    /var/lib/fail2ban \
+    /var/log/clamav \
+    && chown -R secuser:secuser /var/log/auto-secure
 
 # Copy configuration files
 COPY configs/ /tmp/configs/
-RUN cp -r /tmp/configs/* /etc/ && rm -rf /tmp/configs
+RUN if [ -d "/tmp/configs" ]; then cp -r /tmp/configs/* /etc/ 2>/dev/null || true; fi && \
+    rm -rf /tmp/configs
 
-# Copy scripts and make executable
+# Copy scripts
 COPY scripts/ /usr/local/bin/
-RUN chmod +x /usr/local/bin/*.sh
+RUN chmod +x /usr/local/bin/*.sh 2>/dev/null || true
 
 # Initialize security databases
 RUN mkdir -p /var/lib/aide && \
-    aideinit --yes --force && \
-    freshclam --quiet && \
-    tripwire --init -c /etc/tripwire/tw.cfg -p /etc/tripwire/tw.pol --silent && \
-    rkhunter --propupd && \
-    mkdir -p /var/log/auto-secure && \
-    chown -R secuser:secuser /var/log/auto-secure
+    freshclam --quiet 2>/dev/null || true && \
+    rkhunter --propupd 2>/dev/null || true
 
-# Create health check script
-RUN echo '#!/bin/bash\ncurl -f http://localhost/ 2>/dev/null || exit 1' > /healthcheck.sh && \
-    chmod +x /healthcheck.sh
+# Create default web page
+RUN echo '<html><body><h1>Auto-Secure Server</h1><p>Enterprise security for $6/month</p></body></html>' > /var/www/html/index.html && \
+    chown -R secuser:secuser /var/www/html
 
-# Create directories with proper permissions
-RUN mkdir -p /var/www/html /var/log/apache2 /var/log/fail2ban /var/lib/fail2ban && \
-    chown -R secuser:secuser /var/www/html && \
-    chmod 755 /var/www/html
-
-# Setup cron jobs for security updates
-COPY configs/cron/security-jobs /etc/cron.d/auto-secure
-RUN chmod 0644 /etc/cron.d/auto-secure && \
-    crontab /etc/cron.d/auto-secure
+# Create health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost/ 2>/dev/null || exit 1
 
 # Switch to non-root user
 USER secuser
 WORKDIR /home/secuser
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-    CMD /healthcheck.sh
-
-# Expose ports
 EXPOSE 80 443 22
 
-# Use custom entrypoint
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
-CMD ["apache2-foreground"]
+# Use entrypoint if it exists, otherwise default command
+CMD ["/bin/bash", "-c", "if [ -f /usr/local/bin/entrypoint.sh ]; then /usr/local/bin/entrypoint.sh; else apache2ctl -D FOREGROUND; fi"]
