@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  auto-secure:
+    image: yourusername/auto-secure-server:latest
+    container_name: auto-secure-prod
+    ports:
+      - "80:80"
+      - "443:443"
+      - "2222:22"
+    volumes:
+      - /srv/web:/var/www/html
+      - /srv/logs:/var/log
+      - /srv/ssl:/etc/ssl/private
+      - /srv/backups:/backups
+    environment:
+      - TZ=America/New_York
+      - ENABLE_SSL=true
+      - LETSENCRYPT_EMAIL=admin@yourdomain.com
+      - ADMIN_EMAIL=admin@yourdomain.com
+    restart: always
+    cap_add:
+      - NET_ADMIN
+    security_opt:
+      - apparmor=auto-secure-container
+      - seccomp=/etc/docker/seccomp/auto-secure.json
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100M
+      - /var/run:rw,noexec,nosuid,size=10M
+      - /var/lock:rw,noexec,nosuid,size=10M
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - secure-prod-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auto-secure.rule=Host(`yourdomain.com`)"
+      - "traefik.http.routers.auto-secure.entrypoints=websecure"
+      - "traefik.http.routers.auto-secure.tls.certresolver=letsencrypt"
+
+networks:
+  secure-prod-net:
+    driver: bridge
+    internal: false

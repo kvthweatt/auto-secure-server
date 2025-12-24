@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  auto-secure:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: auto-secure-dev
+    ports:
+      - "8080:80"
+      - "8443:443"
+      - "2222:22"
+    volumes:
+      - ./web:/var/www/html
+      - ./logs:/var/log
+      - ./data:/var/lib/mysql
+      - ./backups:/backups
+    environment:
+      - TZ=UTC
+      - ENABLE_SSL=false
+      - ADMIN_EMAIL=admin@localhost
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    security_opt:
+      - apparmor:unconfined
+      - seccomp:unconfined
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=100M
+      - /run:rw,noexec,nosuid,size=10M
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    networks:
+      - secure-net
+
+  # Optional: Add phpMyAdmin
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin-secure
+    ports:
+      - "8081:80"
+    environment:
+      - PMA_HOST=mysql
+      - PMA_PORT=3306
+    depends_on:
+      - mysql
+    networks:
+      - secure-net
+
+  # Optional: Add MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-secure
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=ChangeMe123!
+      - MYSQL_DATABASE=secureapp
+      - MYSQL_USER=secureuser
+      - MYSQL_PASSWORD=SecurePass123!
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - secure-net
+
+networks:
+  secure-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  mysql-data:
