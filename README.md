@@ -6,15 +6,7 @@
 
 A complete, security-hardened Docker container that gives you **enterprise security** for free.
 
-## ⚡ One-Command Deployment
-
-```bash
-# Clone and run
-git clone https://github.com/yourusername/auto-secure-server.git
-cd auto-secure-server
-chmod +x docker-run.sh
-./docker-run.sh
-```
+An `autoconfig.sh` is located in /usr/local/bin for your convenience.
 
 ## 🔒 What's Inside?  
 **Network:**	UFW, iptables, SPA, Fail2Ban WAF  
