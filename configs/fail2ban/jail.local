@@ -1,0 +1,23 @@
+[DEFAULT]
+bantime = -1
+findtime = 3600
+maxretry = 5
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16
+destemail = root@localhost
+sender = root@localhost
+mta = sendmail
+action = %(action_)s
+
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+
+[apache-auth]
+enabled = true
+port = http,https
+filter = apache-auth
+logpath = /var/log/apache2/*error.log
+maxretry = 3

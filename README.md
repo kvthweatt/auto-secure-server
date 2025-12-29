@@ -96,4 +96,6 @@ GitHub Issues
 
 Security Advisories
 
-
+## BUILD:
+`docker buildx build -t kvthweatt/auto-secure-server:latest -f docker/Dockerfile .`
+`

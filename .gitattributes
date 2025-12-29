@@ -1,0 +1,21 @@
+
+# Force LF line endings for shell scripts
+*.sh text eol=lf
+
+# Force LF for other script files
+*.bash text eol=lf
+*.fish text eol=lf
+*.zsh text eol=lf
+
+# Dockerfile and related files
+Dockerfile text eol=lf
+*.dockerfile text eol=lf
+docker-compose*.yml text eol=lf
+
+# Configuration files
+*.conf text eol=lf
+*.config text eol=lf
+*.ini text eol=lf
+
+# Let Git handle other text files normally
+* text=auto
