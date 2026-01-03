@@ -4,7 +4,8 @@
 
 ## 🤔 What is this?
 
-A complete, security-hardened Docker container that gives you **enterprise security** for free.
+A complete, security-hardened Docker container that gives you **enterprise security** for free.  
+Note this is still in progress, there is still work being done.
 
 An `autoconfig.sh` is located in /usr/local/bin for your convenience.
 
